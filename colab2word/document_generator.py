@@ -1,17 +1,16 @@
-"""
-document_generator.py - A module for generating professional documents from Colab notebooks
-"""
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Standard library imports
 from typing import List, Dict, Any, Optional, Union, Literal
 from dataclasses import dataclass, field
 from pathlib import Path
 from datetime import datetime
 import logging
 import io
+
+# External library imports
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from docx import Document
 from docx.shared import RGBColor, Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -113,11 +112,13 @@ class DocumentGenerator:
         viz_settings: Optional[VisualizationSettings] = None,
         output_dir: Optional[Union[str, Path]] = None,
         default_subdirectory: Optional[str] = None,
-        default_filename: Optional[str] = None
+        default_filename: Optional[str] = None,
+        display_output: bool = True
     ):
         """Initializes the document generator with specified settings."""
         self.theme = theme or DocumentTheme()
         self.viz_settings = viz_settings or VisualizationSettings()
+        self.display_output = display_output
         self._setup_logging()
 
         self.output_dir = (Path(output_dir) if output_dir else Path.cwd())
@@ -222,6 +223,10 @@ class DocumentGenerator:
 
     def _add_section(self, doc: Document, section: DocumentSection) -> None:
         """Adds a formatted section to the document."""
+        # Display content in notebook if enabled
+        if self.display_output:
+            self._display_section(section)
+
         if section.page_break_before:
             doc.add_page_break()
 
@@ -302,3 +307,38 @@ class DocumentGenerator:
         except Exception as e:
             self.logger.error(f"Error adding plot to document: {str(e)}")
             raise
+
+    def _display_section(self, section: DocumentSection) -> None:
+        """Displays section content in the notebook."""
+        try:
+            from IPython.display import display, Markdown, HTML
+            
+            # Display header if present
+            if section.header:
+                display(Markdown(f"## {section.header}"))
+            
+            # Display description if present
+            if section.description:
+                display(Markdown(f"*{section.description}*"))
+            
+            # Add spacing
+            display(HTML("<br>"))
+            
+            # Display content based on type
+            if section.content_type == 'text':
+                display(Markdown(section.data))
+            elif section.content_type == 'table':
+                if hasattr(section.data, 'style'):
+                    styled_df = section.data.style.set_caption('Data Table')
+                    display(styled_df)
+                else:
+                    display(section.data)
+            elif section.content_type == 'plot':
+                display(section.data)
+            
+            # Add spacing after content
+            display(HTML("<br><hr><br>"))
+            
+        except ImportError:
+            self.logger.warning("IPython display modules not available - skipping display")
+            pass
