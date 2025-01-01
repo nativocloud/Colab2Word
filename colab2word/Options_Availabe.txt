@@ -1,0 +1,101 @@
+Ini
+
+DocumentGenerator(
+    theme: Optional[DocumentTheme] = None,          # Custom document styling
+    viz_settings: Optional[VisualizationSettings] = None,  # Visualization settings
+    output_dir: Optional[Union[str, Path]] = None,  # Output directory
+    default_subdirectory: Optional[str] = None,     # Default subdirectory
+    default_filename: Optional[str] = None,         # Default output filename
+    display_output: bool = True                     # Show output in notebooks
+)
+
+DocumentTheme(
+    font_family: str = 'DEFAULT',
+    heading1_size: int = 14,
+    heading2_size: int = 13,
+    body_size: int = 11,
+    primary_color: tuple = (0, 0, 0),
+    paragraph_spacing: int = 6,
+    line_spacing: float = 1.15
+)
+
+VisualizationSettings(
+    figure_size: tuple = (10, 6),
+    dpi: int = 300,
+    show_grid: bool = True,
+    grid_alpha: float = 0.3,
+    plot_settings: Dict[str, Any] = {
+        'title_size': 14,
+        'label_size': 12,
+        'tick_size': 10,
+        'show_values': True,
+        'value_format': '.1f'
+    }
+)
+
+DocumentSection(
+    content,                # The actual content (text, DataFrame, or plot)
+    content_type=None,      # 'text', 'table', or 'plot'
+    header=None,            # Section header
+    description=None,       # Section description
+    style_options=None,     # Custom styling options
+    page_break_before=False,# Force page break before section
+    orientation='portrait'  # 'portrait' or 'landscape'
+)
+
+generate_document(
+    sections: List[DocumentSection],    # List of document sections
+    output_filename: Optional[str] = None,  # Output filename
+    subdirectory: Optional[str] = None,     # Output subdirectory
+    title: Optional[str] = None,            # Document title
+    author: Optional[str] = None,           # Document author
+    create_new: bool = False                # Create new or update existing
+)
+
+
+Example Usage:
+
+# Initialize with custom settings
+doc_gen = DocumentGenerator(
+    theme=DocumentTheme(
+        font_family='Calibri',
+        heading1_size=16,
+        body_size=12
+    ),
+    viz_settings=VisualizationSettings(
+        figure_size=(12, 8),
+        dpi=400
+    ),
+    output_dir='reports',
+    default_filename='report.docx'
+)
+
+# Create document sections
+sections = [
+    DocumentSection(
+        content="# Analysis Report",
+        content_type='text',
+        header="Introduction",
+        page_break_before=True
+    ),
+    DocumentSection(
+        content=df_results,
+        content_type='table',
+        header="Results",
+        style_options={'include_index': False}
+    ),
+    DocumentSection(
+        content=plot_figure,
+        content_type='plot',
+        header="Visualizations",
+        style_options={'width': 8}
+    )
+]
+
+# Generate document
+doc_gen.generate_document(
+    sections=sections,
+    title="Analysis Report",
+    author="Data Science Team",
+    create_new=True
+)

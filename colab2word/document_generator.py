@@ -14,6 +14,7 @@ import seaborn as sns
 from docx import Document
 from docx.shared import RGBColor, Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.section import WD_ORIENT
 
 @dataclass
 class DocumentTheme:
@@ -72,6 +73,7 @@ class DocumentSection:
         content_type=None,
         header=None,
         description=None,
+        comments=None,
         style_options=None,
         page_break_before=False,
         orientation: Literal['portrait', 'landscape'] = 'portrait'
@@ -100,6 +102,7 @@ class DocumentSection:
         self.data = content
         self.header = header
         self.description = description or ''
+        self.comments = comments or ''
         self.style_options = style_options or {}
         self.page_break_before = page_break_before
         self.orientation = orientation
@@ -246,6 +249,12 @@ class DocumentGenerator:
         elif section.content_type == 'plot':
             self._add_plot(doc, section)
 
+        if section.comments:
+            comments_para = doc.add_paragraph(style='Normal')
+            comments_run = comments_para.add_run("Comments: ")
+            comments_run.bold = True
+            comments_para.add_run(section.comments)
+
     def _add_table(self, doc: Document, df: pd.DataFrame, include_index: bool = True) -> None:
         """Adds a formatted table to the document."""
         if include_index:
@@ -286,7 +295,7 @@ class DocumentGenerator:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     def _add_plot(self, doc: Document, section: DocumentSection) -> None:
-        """Adds a plot to the document."""
+        """Adds a plot to the document with orientation and comments."""
         try:
             fig = section.data
             buffer = io.BytesIO()
@@ -300,9 +309,23 @@ class DocumentGenerator:
             )
             buffer.seek(0)
             
-            width = section.style_options.get('width', 6)
+            # Handle orientation through page dimensions
+            if section.orientation == 'landscape':
+                width = section.style_options.get('width', 8)  # Wider for landscape
+                doc.add_section(WD_ORIENT.LANDSCAPE)
+            else:
+                width = section.style_options.get('width', 6)  # Default for portrait
+                doc.add_section(WD_ORIENT.PORTRAIT)
+                
             doc.add_picture(buffer, width=Inches(width))
             buffer.close()
+
+            # Add comments after the plot if present
+            if section.comments:
+                comments_para = doc.add_paragraph(style='Normal')
+                comments_run = comments_para.add_run("Figure Comments: ")
+                comments_run.bold = True
+                comments_para.add_run(section.comments)
         
         except Exception as e:
             self.logger.error(f"Error adding plot to document: {str(e)}")
@@ -335,6 +358,11 @@ class DocumentGenerator:
                     display(section.data)
             elif section.content_type == 'plot':
                 display(section.data)
+            
+            # Display comments if present
+            if section.comments:
+                display(HTML("<br>"))
+                display(Markdown(f"**Comments:** {section.comments}"))
             
             # Add spacing after content
             display(HTML("<br><hr><br>"))
